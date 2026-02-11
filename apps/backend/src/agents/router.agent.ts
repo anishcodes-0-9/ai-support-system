@@ -1,24 +1,39 @@
+import { generateObject } from "ai";
+import { z } from "zod";
+import { openai } from "../lib/ai.js";
 import { orderAgent } from "./order.agent.js";
 import { billingAgent } from "./billing.agent.js";
 import { supportAgent } from "./support.agent.js";
 
+const intentSchema = z.object({
+  intent: z.enum(["order", "billing", "support"]),
+});
+
 export const routerAgent = {
   async route(userId: string, conversationId: string, message: string) {
-    const lower = message.toLowerCase();
+    const { object } = await generateObject({
+      model: openai("gpt-4o-mini"),
+      schema: intentSchema,
+      prompt: `
+Classify the user's intent into one of:
+- order
+- billing
+- support
 
-    if (
-      lower.includes("order") ||
-      lower.includes("track") ||
-      lower.includes("delivery")
-    ) {
+User message:
+"${message}"
+
+Respond only with the intent.
+      `,
+    });
+
+    const intent = object.intent;
+
+    if (intent === "order") {
       return orderAgent.handle(userId, message);
     }
 
-    if (
-      lower.includes("invoice") ||
-      lower.includes("refund") ||
-      lower.includes("payment")
-    ) {
+    if (intent === "billing") {
       return billingAgent.handle(userId, message);
     }
 
