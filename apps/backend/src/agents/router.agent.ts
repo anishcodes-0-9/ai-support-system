@@ -37,6 +37,6 @@ Respond only with the intent.
       return billingAgent.handle(userId, message);
     }
 
-    return supportAgent.handle(conversationId);
+    return supportAgent.handle(conversationId, message);
   },
 };

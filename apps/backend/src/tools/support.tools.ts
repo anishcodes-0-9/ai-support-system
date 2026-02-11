@@ -6,7 +6,7 @@ export const supportTools = {
       await conversationRepository.getConversationById(conversationId);
 
     if (!conversation) {
-      return { error: "Conversation not found" };
+      return [];
     }
 
     return conversation.messages.map((message) => ({

@@ -7,48 +7,42 @@ export const chatController = {
     const { userId, conversationId, message } = await c.req.json();
 
     if (!userId || !conversationId || !message) {
-      return c.json({ error: "Missing fields" }, 400);
+      return c.json({ error: "Missing required fields" }, 400);
     }
 
-    // Save user message
     await chatService.addMessage(conversationId, "user", message);
 
-    // Route message
-    const agentResponse = await routerAgent.route(
-      userId,
-      conversationId,
-      message,
-    );
+    const result = await routerAgent.route(userId, conversationId, message);
 
-    // Save agent response
-    await chatService.addMessage(
-      conversationId,
-      "assistant",
-      JSON.stringify(agentResponse),
-    );
-
-    return c.json(agentResponse);
+    return c.body(result.textStream, 200, {
+      "Content-Type": "text/plain; charset=utf-8",
+    });
   },
 
   async getConversation(c: Context) {
     const id = c.req.param("id");
     const conversation = await chatService.getConversation(id);
+
     return c.json(conversation);
   },
 
   async listConversations(c: Context) {
     const userId = c.req.query("userId");
+
     if (!userId) {
       return c.json({ error: "Missing userId" }, 400);
     }
 
     const conversations = await chatService.listConversations(userId);
+
     return c.json(conversations);
   },
 
   async deleteConversation(c: Context) {
     const id = c.req.param("id");
-    // Optional: implement delete in repository later
-    return c.json({ message: "Delete not implemented yet" });
+
+    return c.json({
+      message: "Delete not implemented yet",
+    });
   },
 };
