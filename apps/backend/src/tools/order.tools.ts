@@ -13,16 +13,13 @@ export const orderTools = {
       status: order.status,
       trackingNumber: order.trackingNumber,
       deliveryStatus: order.deliveryStatus,
+      estimatedDeliveryDate: order.estimatedDeliveryDate,
+      createdAt: order.createdAt,
     };
   },
 
   async listUserOrders(userId: string) {
-    const orders = await orderRepository.getOrdersByUser(userId);
-
-    return orders.map((order) => ({
-      id: order.id,
-      status: order.status,
-      deliveryStatus: order.deliveryStatus,
-    }));
+    // 🔥 Return FULL order objects
+    return orderRepository.getOrdersByUser(userId);
   },
 };

@@ -4,6 +4,9 @@ export const orderRepository = {
   async getOrdersByUser(userId: string) {
     return prisma.order.findMany({
       where: { userId },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
   },
 

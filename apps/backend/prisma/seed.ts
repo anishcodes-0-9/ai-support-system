@@ -9,36 +9,40 @@ async function main() {
     },
   });
 
-  await prisma.order.createMany({
-    data: [
-      {
-        userId: user.id,
-        status: "SHIPPED",
-        trackingNumber: "TRK123456",
-        deliveryStatus: "In Transit",
-      },
-      {
-        userId: user.id,
-        status: "DELIVERED",
-        trackingNumber: "TRK789101",
-        deliveryStatus: "Delivered",
-      },
-    ],
+  await prisma.order.create({
+    data: {
+      userId: user.id,
+      status: "SHIPPED",
+      trackingNumber: "TRK123456",
+      deliveryStatus: "In Transit",
+      estimatedDeliveryDate: new Date("2026-02-14"),
+    },
   });
 
-  await prisma.invoice.createMany({
-    data: [
-      {
-        userId: user.id,
-        amount: 1999,
-        status: "PAID",
-      },
-      {
-        userId: user.id,
-        amount: 499,
-        status: "REFUND_PENDING",
-      },
-    ],
+  await prisma.order.create({
+    data: {
+      userId: user.id,
+      status: "DELIVERED",
+      trackingNumber: "TRK789101",
+      deliveryStatus: "Delivered",
+      estimatedDeliveryDate: new Date("2026-02-08"),
+    },
+  });
+
+  await prisma.invoice.create({
+    data: {
+      userId: user.id,
+      amount: 1999,
+      status: "PAID",
+    },
+  });
+
+  await prisma.invoice.create({
+    data: {
+      userId: user.id,
+      amount: 499,
+      status: "REFUND_PENDING",
+    },
   });
 
   await prisma.conversation.create({
@@ -59,7 +63,7 @@ async function main() {
     },
   });
 
-  console.log("Seed completed successfully.");
+  console.log("🌱 Seed completed successfully.");
 }
 
 main()

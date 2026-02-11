@@ -27,7 +27,7 @@ importers:
         specifier: ^1.19.9
         version: 1.19.9(hono@4.11.9)
       '@prisma/client':
-        specifier: '5'
+        specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
       ai:
         specifier: ^6.0.79
@@ -36,7 +36,7 @@ importers:
         specifier: ^4.11.9
         version: 4.11.9
       prisma:
-        specifier: '5'
+        specifier: ^5.22.0
         version: 5.22.0
       zod:
         specifier: ^4.3.6

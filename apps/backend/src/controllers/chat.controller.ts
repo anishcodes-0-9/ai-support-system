@@ -14,7 +14,35 @@ export const chatController = {
 
     const result = await routerAgent.route(userId, conversationId, message);
 
-    return c.body(result.textStream, 200, {
+    let fullResponse = "";
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          const reader = result.textStream.getReader();
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            fullResponse += value;
+            controller.enqueue(value);
+          }
+
+          controller.close();
+
+          await chatService.addMessage(
+            conversationId,
+            "assistant",
+            fullResponse,
+          );
+        } catch (err) {
+          controller.error(err);
+        }
+      },
+    });
+
+    return c.body(stream, 200, {
       "Content-Type": "text/plain; charset=utf-8",
     });
   },
@@ -22,7 +50,6 @@ export const chatController = {
   async getConversation(c: Context) {
     const id = c.req.param("id");
     const conversation = await chatService.getConversation(id);
-
     return c.json(conversation);
   },
 
@@ -39,8 +66,6 @@ export const chatController = {
   },
 
   async deleteConversation(c: Context) {
-    const id = c.req.param("id");
-
     return c.json({
       message: "Delete not implemented yet",
     });
