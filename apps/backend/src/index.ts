@@ -2,8 +2,10 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { chatRoutes } from "./routes/chat.routes.js";
 import { agentRoutes } from "./routes/agent.routes.js";
+import { rateLimit } from "./middleware/rateLimit.middleware.js";
 
 const app = new Hono();
+app.use("*", rateLimit);
 
 app.get("/api/health", (c) => c.json({ status: "ok" }));
 
