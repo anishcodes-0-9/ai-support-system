@@ -1,135 +1,135 @@
-# Turborepo starter
+### AI Support System – An AI‑powered customer support backend with structured multi‑agent routing, streaming responses, and deterministic database grounding.
 
-This Turborepo starter is maintained by the Turborepo core team.
+It simulates an e‑commerce support assistant capable of handling:
 
-## Using this example
+- Order tracking
+- Delivery estimation
+- Invoice queries
+- General support questions
 
-Run the following command:
+The system is built with clean layered architecture and designed to avoid hallucinations by grounding responses in real database data.
 
-```sh
-npx create-turbo@latest
-```
+### Architecture Overview\*\*
 
-## What's inside?
+The system follows a layered backend architecture:
 
-This Turborepo includes the following packages/apps:
+Routes → Controllers → Agents → Tools → Repositories → Database
 
-### Apps and Packages
+Core Components
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+- Router Agent – classifies user intent (order / billing / support)
+- Order Agent – deterministic delivery logic using real order data
+- Billing Agent – invoice‑based responses
+- Support Agent – general support handling
+- Prisma ORM – database access layer
+- Streaming Layer – real‑time AI responses
+- Conversation Persistence – stores full message history
+- Rate Limiting Middleware – basic request throttling
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+### Tech Stack
 
-### Utilities
+- Node.js
+- TypeScript
+- Hono
+- Prisma
+- PostgreSQL
+- OpenAI (AI SDK)
+- Turborepo
 
-This Turborepo has some additional tools already setup for you:
+### Implemented Features
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+- Structured intent classification using schema validation
+- Multi‑agent routing
+- Streaming AI responses
+- Conversation history injection into agents
+- Deterministic order delivery logic
+- Estimated delivery date support
+- Database seeding
+- Rate limiting middleware
+- Global error handler
+- Minimal web‑based frontend demo
 
-### Build
+**Getting Started**
 
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
-
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
+1️⃣ Install Dependencies
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+pnpm install
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+2️⃣ Setup Environment Variables (apps/backend/.env)
 
 ```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+DATABASE_URL="postgresql://postgres:password@localhost:5432/ai_support"
+OPENAI_API_KEY="your_openai_api_key"
 ```
 
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+3️⃣ Run Database Migration (apps/backend)
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+pnpm prisma migrate dev --name init
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+4️⃣ Seed Database
 
 ```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+pnpm prisma db seed
 ```
 
-## Useful Links
+5️⃣ Start Backend
 
-Learn more about the power of Turborepo:
+```
+pnpm dev
+```
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+Server runs at: `http://localhost:3000`  
+ Health check: `http://localhost:3000/api/health`
+
+**Demo**  
+Open `http://localhost:3000` and try example queries:
+
+- Where is my latest order?
+- When will it reach me?
+- Tell me about my delivered order
+- Show me my invoices
+
+**API Endpoint**  
+`POST /api/chat/messages`
+
+Request Body:
+
+```json
+{
+  "userId": "uuid",
+  "conversationId": "uuid",
+  "message": "Where is my latest order?"
+}
+```
+
+### Design Decisions
+
+- Deterministic order data injection to prevent hallucinations
+- Schema‑based intent classification for strict routing
+- Clean separation of concerns via layered architecture
+- Streaming responses while persisting assistant output
+- Minimal but functional frontend for demonstration
+
+### Tradeoffs
+
+- No authentication layer
+- No Redis‑based distributed rate limiting
+- No automated tests
+- Minimal frontend styling
+- No deployment included
+
+**Future Improvements**
+
+- Add authentication and session management
+- Redis‑based rate limiting
+- Unit and integration tests
+- Production deployment
+- React frontend
+- Structured logging and monitoring
+
+**Notes**  
+This project focuses on backend architecture, correctness, and deterministic AI behavior rather than UI polish.

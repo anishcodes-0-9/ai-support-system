@@ -5,13 +5,131 @@ import { agentRoutes } from "./routes/agent.routes.js";
 import { rateLimit } from "./middleware/rateLimit.middleware.js";
 
 const app = new Hono();
-app.use("*", rateLimit);
 
+// Apply rate limit only to API routes
+app.use("/api/*", rateLimit);
+
+// Health check
 app.get("/api/health", (c) => c.json({ status: "ok" }));
 
+// Minimal Frontend
+app.get("/", (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>AI Support Chat</title>
+      <style>
+        body { font-family: Arial; max-width: 700px; margin: 40px auto; }
+        #chat { 
+          border: 1px solid #ccc; 
+          padding: 10px; 
+          height: 400px; 
+          overflow-y: auto; 
+          background: #fafafa;
+        }
+        .user { margin: 8px 0; }
+        .ai { margin: 8px 0; color: #333; }
+        input { width: 75%; padding: 8px; }
+        button { padding: 8px 12px; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+      </style>
+    </head>
+    <body>
+      <h2>AI Support Chat</h2>
+
+      <div id="chat"></div>
+      <br/>
+      <input id="message" placeholder="Ask something..." />
+      <button id="sendBtn">Send</button>
+
+      <script>
+        const userId = "4b200b02-1798-4d8a-9619-fb08176e4962";
+        const conversationId = "f2f07ddb-7a49-42de-982a-951556975f16";
+
+        const chat = document.getElementById("chat");
+        const input = document.getElementById("message");
+        const sendBtn = document.getElementById("sendBtn");
+
+        function appendMessage(className, label, text) {
+          const div = document.createElement("div");
+          div.className = className;
+          div.innerHTML = "<b>" + label + ":</b> " + text;
+          chat.appendChild(div);
+          chat.scrollTop = chat.scrollHeight;
+          return div;
+        }
+
+        async function send() {
+          const message = input.value.trim();
+          if (!message) return;
+
+          // Clear input immediately
+          input.value = "";
+
+          // Disable button
+          sendBtn.disabled = true;
+
+          appendMessage("user", "You", message);
+
+          try {
+            const response = await fetch("/api/chat/messages", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId,
+                conversationId,
+                message
+              })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            let fullText = "";
+            const aiDiv = appendMessage("ai", "AI", "");
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              const chunk = decoder.decode(value);
+              fullText += chunk;
+              aiDiv.innerHTML = "<b>AI:</b> " + fullText;
+
+              // Auto scroll during streaming
+              chat.scrollTop = chat.scrollHeight;
+            }
+
+          } catch (err) {
+            appendMessage("ai", "AI", "Something went wrong.");
+            console.error(err);
+          } finally {
+            sendBtn.disabled = false;
+          }
+        }
+
+        sendBtn.addEventListener("click", send);
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") send();
+        });
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// Routes
 app.route("/api/chat", chatRoutes);
 app.route("/api/agents", agentRoutes);
 
+// Global error handler
+app.onError((err, c) => {
+  console.error("Unhandled Error:", err);
+  return c.json({ error: "Internal Server Error" }, 500);
+});
+
+// Start server
 serve(
   {
     fetch: app.fetch,
