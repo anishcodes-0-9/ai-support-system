@@ -1,18 +1,60 @@
 import type { Context } from "hono";
 import { chatService } from "../services/chat.service.js";
 import { routerAgent } from "../agents/router.agent.js";
+import { ValidationError } from "../lib/errors.js";
+import { logger } from "../lib/logger.js";
 
 export const chatController = {
   async sendMessage(c: Context) {
-    const { userId, conversationId, message } = await c.req.json();
+    const {
+      userId,
+      conversationId: incomingConversationId,
+      message,
+    } = await c.req.json();
 
-    if (!userId || !conversationId || !message) {
-      return c.json({ error: "Missing required fields" }, 400);
+    const requestId = c.get("requestId");
+
+    logger.info(
+      { requestId, userId, incomingConversationId, message },
+      "Incoming chat message",
+    );
+
+    if (!userId || !message) {
+      throw new ValidationError("Missing required fields");
     }
 
+    let conversationId = incomingConversationId;
+
+    // Fetch conversation
+    let conversation = await chatService.getConversation(conversationId);
+
+    // Auto-create if missing
+    if (!conversation) {
+      logger.info(
+        { requestId, userId },
+        "Conversation not found, creating new conversation",
+      );
+
+      conversation = await chatService.createConversation(userId);
+      conversationId = conversation.id;
+    }
+
+    // Ownership validation
+    if (conversation.userId !== userId) {
+      throw new ValidationError("Unauthorized conversation access");
+    }
+
+    logger.debug({ requestId, conversationId }, "Conversation validated");
+
+    // Persist user message
     await chatService.addMessage(conversationId, "user", message);
 
+    logger.debug({ requestId }, "User message persisted");
+
+    // Route to agent
     const result = await routerAgent.route(userId, conversationId, message);
+
+    logger.info({ requestId }, "Agent routing complete, streaming response");
 
     let fullResponse = "";
 
@@ -36,7 +78,10 @@ export const chatController = {
             "assistant",
             fullResponse,
           );
+
+          logger.info({ requestId }, "Assistant response persisted");
         } catch (err) {
+          logger.error({ requestId, err }, "Streaming failed");
           controller.error(err);
         }
       },
@@ -44,30 +89,6 @@ export const chatController = {
 
     return c.body(stream, 200, {
       "Content-Type": "text/plain; charset=utf-8",
-    });
-  },
-
-  async getConversation(c: Context) {
-    const id = c.req.param("id");
-    const conversation = await chatService.getConversation(id);
-    return c.json(conversation);
-  },
-
-  async listConversations(c: Context) {
-    const userId = c.req.query("userId");
-
-    if (!userId) {
-      return c.json({ error: "Missing userId" }, 400);
-    }
-
-    const conversations = await chatService.listConversations(userId);
-
-    return c.json(conversations);
-  },
-
-  async deleteConversation(c: Context) {
-    return c.json({
-      message: "Delete not implemented yet",
     });
   },
 };

@@ -3,6 +3,8 @@ import { Hono } from "hono";
 import { chatRoutes } from "./routes/chat.routes.js";
 import { agentRoutes } from "./routes/agent.routes.js";
 import { rateLimit } from "./middleware/rateLimit.middleware.js";
+import { AppError } from "./lib/errors.js";
+import { logger } from "./lib/logger.js";
 
 const app = new Hono();
 
@@ -123,10 +125,16 @@ app.get("/", (c) => {
 app.route("/api/chat", chatRoutes);
 app.route("/api/agents", agentRoutes);
 
-// Global error handler
 app.onError((err, c) => {
-  console.error("Unhandled Error:", err);
-  return c.json({ error: "Internal Server Error" }, 500);
+  logger.error({ err }, "Unhandled application error");
+
+  if (err instanceof AppError) {
+    c.status(err.statusCode as any);
+    return c.json({ error: err.message });
+  }
+
+  c.status(500);
+  return c.json({ error: "Internal Server Error" });
 });
 
 // Start server
