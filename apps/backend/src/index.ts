@@ -3,10 +3,13 @@ import { Hono } from "hono";
 import { chatRoutes } from "./routes/chat.routes.js";
 import { agentRoutes } from "./routes/agent.routes.js";
 import { rateLimit } from "./middleware/rateLimit.middleware.js";
+import { requestId } from "./middleware/requestId.middleware.js";
 import { AppError } from "./lib/errors.js";
 import { logger } from "./lib/logger.js";
 
 const app = new Hono();
+// Attach request ID first
+app.use("/api/*", requestId);
 
 // Apply rate limit only to API routes
 app.use("/api/*", rateLimit);
