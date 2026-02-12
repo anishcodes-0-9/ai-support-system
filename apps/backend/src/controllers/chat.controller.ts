@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 import { chatService } from "../services/chat.service.js";
 import { routerAgent } from "../agents/router.agent.js";
-import { ValidationError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
+import { ValidationError, NotFoundError } from "../lib/AppError.js";
 
 export const chatController = {
   async sendMessage(c: Context) {
@@ -19,16 +19,27 @@ export const chatController = {
       "Incoming chat message",
     );
 
+    // 🔐 Basic validation
     if (!userId || !message) {
       throw new ValidationError("Missing required fields");
     }
 
+    // 🔐 Validate user exists BEFORE anything else
+    const user = await chatService.getUserById(userId);
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
     let conversationId = incomingConversationId;
+    let conversation = null;
 
-    // Fetch conversation
-    let conversation = await chatService.getConversation(conversationId);
+    // Fetch conversation if ID provided
+    if (conversationId) {
+      conversation = await chatService.getConversation(conversationId);
+    }
 
-    // Auto-create if missing
+    // Auto-create conversation if missing
     if (!conversation) {
       logger.info(
         { requestId, userId },
@@ -39,7 +50,7 @@ export const chatController = {
       conversationId = conversation.id;
     }
 
-    // Ownership validation
+    // 🔐 Ownership validation
     if (conversation.userId !== userId) {
       throw new ValidationError("Unauthorized conversation access");
     }

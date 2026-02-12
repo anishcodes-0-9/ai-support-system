@@ -4,7 +4,7 @@ import { chatRoutes } from "./routes/chat.routes.js";
 import { agentRoutes } from "./routes/agent.routes.js";
 import { rateLimit } from "./middleware/rateLimit.middleware.js";
 import { requestId } from "./middleware/requestId.middleware.js";
-import { AppError } from "./lib/errors.js";
+import { AppError } from "./lib/AppError.js";
 import { logger } from "./lib/logger.js";
 
 const app = new Hono();
@@ -129,15 +129,30 @@ app.route("/api/chat", chatRoutes);
 app.route("/api/agents", agentRoutes);
 
 app.onError((err, c) => {
-  logger.error({ err }, "Unhandled application error");
-
   if (err instanceof AppError) {
-    c.status(err.statusCode as any);
-    return c.json({ error: err.message });
+    logger.warn(
+      { message: err.message, statusCode: err.statusCode },
+      "Operational error",
+    );
+
+    return c.json(
+      {
+        success: false,
+        error: err.message,
+      },
+      err.statusCode as any,
+    );
   }
 
-  c.status(500);
-  return c.json({ error: "Internal Server Error" });
+  logger.error({ err }, "Unexpected system error");
+
+  return c.json(
+    {
+      success: false,
+      error: "Internal Server Error",
+    },
+    500 as any,
+  );
 });
 
 // Start server

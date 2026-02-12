@@ -1,4 +1,5 @@
 import { conversationRepository } from "../repositories/conversation.repository.js";
+import { userRepository } from "../repositories/user.repository.js";
 
 export const chatService = {
   async createConversation(userId: string) {
@@ -15,5 +16,8 @@ export const chatService = {
 
   async addMessage(conversationId: string, role: string, content: string) {
     return conversationRepository.addMessage(conversationId, role, content);
+  },
+  async getUserById(id: string) {
+    return userRepository.getUserById(id);
   },
 };
