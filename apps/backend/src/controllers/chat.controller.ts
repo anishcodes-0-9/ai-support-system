@@ -83,6 +83,9 @@ export const chatController = {
           }
 
           controller.close();
+          if ((result as any)._timeout) {
+            clearTimeout((result as any)._timeout);
+          }
 
           await chatService.addMessage(
             conversationId,

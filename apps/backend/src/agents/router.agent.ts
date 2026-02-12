@@ -10,18 +10,36 @@ const intentSchema = z.object({
   intent: z.enum(["order", "billing", "support"]),
 });
 
+// ⏱ Timeout helper
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error("LLM_TIMEOUT"));
+    }, ms);
+
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 export const routerAgent = {
   async route(userId: string, conversationId: string, message: string) {
-    try {
-      logger.info(
-        { userId, conversationId, message },
-        "Router received message",
-      );
+    logger.info({ userId, conversationId, message }, "Router received message");
 
-      const { object } = await generateObject({
-        model: openai("gpt-4o-mini"),
-        schema: intentSchema,
-        prompt: `
+    try {
+      // ⏱ Timeout protected intent classification
+      const { object } = await withTimeout(
+        generateObject({
+          model: openai("gpt-4o-mini"),
+          schema: intentSchema,
+          prompt: `
 Classify the user's intent into one of:
 - order
 - billing
@@ -31,8 +49,10 @@ User message:
 "${message}"
 
 Respond only with the intent.
-        `,
-      });
+          `,
+        }),
+        8000, // 8 second timeout
+      );
 
       const intent = object.intent;
 
@@ -50,12 +70,18 @@ Respond only with the intent.
 
       logger.debug("Delegating to SupportAgent");
       return supportAgent.handle(conversationId, message);
-    } catch (err) {
-      logger.error(
-        { err, userId, conversationId, message },
-        "RouterAgent failed",
-      );
-      throw err;
+    } catch (err: any) {
+      if (err.message === "LLM_TIMEOUT") {
+        logger.error("Intent classification timeout");
+
+        // Fallback to support agent
+        return supportAgent.handle(conversationId, message);
+      }
+
+      logger.error({ err }, "Router failed unexpectedly");
+
+      // Safe fallback
+      return supportAgent.handle(conversationId, message);
     }
   },
 };

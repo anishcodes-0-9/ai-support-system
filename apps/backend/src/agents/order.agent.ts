@@ -10,6 +10,7 @@ export const orderAgent = {
       logger.info({ userId, conversationId, message }, "OrderAgent invoked");
 
       const conversation = await chatService.getConversation(conversationId);
+
       const history = (conversation?.messages ?? []).slice(-10);
 
       logger.debug(
@@ -43,8 +44,16 @@ Created At: ${new Date(o.createdAt).toDateString()}
 
       logger.debug("Prepared formatted orders for LLM");
 
-      return streamText({
+      const controller = new AbortController();
+
+      const timeout = setTimeout(() => {
+        logger.error("OrderAgent stream timeout");
+        controller.abort();
+      }, 15000);
+
+      const result = streamText({
         model: openai("gpt-4o-mini"),
+        abortSignal: controller.signal,
 
         system: `
 You are an Order Support Agent.
@@ -73,8 +82,13 @@ Respond clearly and conversationally.
           },
         ],
       });
+
+      // Attach timeout so controller can clear it later
+      (result as any)._timeout = timeout;
+
+      return result;
     } catch (err) {
-      logger.error({ err, userId, conversationId }, "OrderAgent failed");
+      logger.error({ err }, "OrderAgent failed");
       throw err;
     }
   },
