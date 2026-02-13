@@ -7,12 +7,53 @@ import { requestId } from "./middleware/requestId.middleware.js";
 import { AppError } from "./lib/AppError.js";
 import { logger } from "./lib/logger.js";
 
-const app = new Hono();
+type Variables = {
+  requestId: string;
+  startTime: number;
+};
+
+const app = new Hono<{ Variables: Variables }>();
+
 // Attach request ID first
-app.use("/api/*", requestId);
+app.use(requestId);
 
 // Apply rate limit only to API routes
 app.use("/api/*", rateLimit);
+
+// Request duration tracking middleware
+app.use("*", async (c, next) => {
+  const start = Date.now();
+
+  await next();
+
+  const durationMs = Date.now() - start;
+  const status = c.res.status;
+  const requestId = c.get("requestId");
+
+  if (durationMs > 2000) {
+    logger.warn(
+      {
+        requestId,
+        method: c.req.method,
+        path: c.req.path,
+        status,
+        durationMs,
+      },
+      "Slow request detected",
+    );
+  } else {
+    logger.info(
+      {
+        requestId,
+        method: c.req.method,
+        path: c.req.path,
+        status,
+        durationMs,
+      },
+      "Request completed",
+    );
+  }
+});
 
 // Health check
 app.get("/api/health", (c) => c.json({ status: "ok" }));
