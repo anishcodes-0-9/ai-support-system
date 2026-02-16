@@ -14,13 +14,15 @@ type Variables = {
 
 const app = new Hono<{ Variables: Variables }>();
 
-// Attach request ID first
-app.use(requestId);
+// 1️⃣ Attach request ID first
+app.use("*", requestId);
 
-// Apply rate limit only to API routes
+// 2️⃣ Apply rate limiting BEFORE routes
 app.use("/api/*", rateLimit);
+app.route("/api/chat", chatRoutes);
+app.route("/api/agents", agentRoutes);
 
-// Request duration tracking middleware
+// 3️⃣ Request duration tracking
 app.use("*", async (c, next) => {
   const start = Date.now();
 
@@ -55,6 +57,7 @@ app.use("*", async (c, next) => {
   }
 });
 
+// 4️⃣ Routes AFTER middleware
 // Health check
 app.get("/api/health", (c) => c.json({ status: "ok" }));
 

@@ -3,14 +3,31 @@ import { chatService } from "../services/chat.service.js";
 import { routerAgent } from "../agents/router.agent.js";
 import { logger } from "../lib/logger.js";
 import { ValidationError, NotFoundError } from "../lib/AppError.js";
+import { z } from "zod";
+
+const sendMessageSchema = z.object({
+  userId: z.string().uuid(),
+  conversationId: z.string().uuid().optional(),
+  message: z.string().min(1),
+});
 
 export const chatController = {
   async sendMessage(c: Context) {
+    const body = await c.req.json().catch(() => {
+      throw new ValidationError("Invalid JSON body");
+    });
+
+    const parsed = sendMessageSchema.safeParse(body);
+
+    if (!parsed.success) {
+      throw new ValidationError("Invalid request payload");
+    }
+
     const {
       userId,
       conversationId: incomingConversationId,
       message,
-    } = await c.req.json();
+    } = parsed.data;
 
     const requestId = c.get("requestId");
 
@@ -19,33 +36,33 @@ export const chatController = {
       "Incoming chat message",
     );
 
-    // 🔐 Basic validation
-    if (!userId || !message) {
-      throw new ValidationError("Missing required fields");
-    }
-
-    // 🔐 Validate user exists BEFORE anything else
+    // 🔐 Validate user exists
     const user = await chatService.getUserById(userId);
 
     if (!user) {
       throw new NotFoundError("User not found");
     }
 
-    let conversationId = incomingConversationId;
-    let conversation = null;
+    let conversationId: string;
+    let conversation;
 
-    // Fetch conversation if ID provided
-    if (conversationId) {
-      conversation = await chatService.getConversation(conversationId);
-    }
+    // If conversationId was provided, try fetching it
+    if (incomingConversationId) {
+      conversation = await chatService.getConversation(incomingConversationId);
 
-    // Auto-create conversation if missing
-    if (!conversation) {
-      logger.info(
-        { requestId, userId },
-        "Conversation not found, creating new conversation",
-      );
+      if (conversation) {
+        conversationId = conversation.id;
+      } else {
+        logger.info(
+          { requestId, userId },
+          "Conversation not found, creating new conversation",
+        );
 
+        conversation = await chatService.createConversation(userId);
+        conversationId = conversation.id;
+      }
+    } else {
+      // No conversationId provided → create new one
       conversation = await chatService.createConversation(userId);
       conversationId = conversation.id;
     }
@@ -83,9 +100,6 @@ export const chatController = {
           }
 
           controller.close();
-          if ((result as any)._timeout) {
-            clearTimeout((result as any)._timeout);
-          }
 
           await chatService.addMessage(
             conversationId,
