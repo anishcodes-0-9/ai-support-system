@@ -180,11 +180,15 @@ app.route("/api/chat", chatRoutes);
 app.route("/api/agents", agentRoutes);
 
 app.onError((err, c) => {
-  const requestId = c.get("requestId");
+  const requestId = c.get("requestId") ?? "unknown";
 
   if (err instanceof AppError) {
     logger.warn(
-      { requestId, message: err.message, statusCode: err.statusCode },
+      {
+        requestId,
+        message: err.message,
+        statusCode: err.statusCode,
+      },
       "Operational error",
     );
 
@@ -194,11 +198,17 @@ app.onError((err, c) => {
         error: err.message,
         requestId,
       },
-      err.statusCode as any, // 👈 important
+      err.statusCode as any,
     );
   }
 
-  logger.error({ requestId, err }, "Unexpected system error");
+  logger.error(
+    {
+      requestId,
+      err,
+    },
+    "Unexpected error",
+  );
 
   return c.json(
     {
