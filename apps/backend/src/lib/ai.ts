@@ -1,5 +1,5 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import { openai as createOpenAI } from "@ai-sdk/openai";
 
-export const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const modelName = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
+export const openai = (model?: string) => createOpenAI(model || modelName);

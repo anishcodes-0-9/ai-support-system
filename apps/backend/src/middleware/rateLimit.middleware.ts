@@ -1,7 +1,7 @@
 import type { Context, Next } from "hono";
 
-const WINDOW_MS = 10_000; // 10 seconds (temporary for testing)
-const MAX_REQUESTS = 5; // 5 requests max (temporary for testing)
+const WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000;
+const MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX) || 30;
 
 const requestCounts = new Map<string, { count: number; timestamp: number }>();
 

@@ -37,7 +37,7 @@ export const routerAgent = {
       // ⏱ Timeout protected intent classification
       const { object } = await withTimeout(
         generateObject({
-          model: openai("gpt-4o-mini"),
+          model: openai(),
           schema: intentSchema,
           prompt: `
 Classify the user's intent into one of:

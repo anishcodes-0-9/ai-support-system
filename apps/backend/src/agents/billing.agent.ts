@@ -14,7 +14,7 @@ export const billingAgent = {
     const invoices = await billingTools.listUserInvoices(userId);
 
     return streamText({
-      model: openai("gpt-4o-mini"),
+      model: openai(),
 
       system: `
 You are a Billing Support Agent.

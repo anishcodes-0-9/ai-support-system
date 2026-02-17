@@ -9,7 +9,7 @@ export const supportAgent = {
 
     // 2️⃣ Stream conversational response
     return streamText({
-      model: openai("gpt-4o-mini"),
+      model: openai(),
 
       system: `
 You are a General Support Agent.
