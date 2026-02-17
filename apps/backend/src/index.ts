@@ -211,12 +211,29 @@ app.onError((err, c) => {
 });
 
 // Start server
-serve(
-  {
-    fetch: app.fetch,
-    port: 3000,
-  },
-  (info) => {
-    console.log(`Server is running on http://localhost:${info.port}`);
-  },
-);
+// Start server
+const server = serve({
+  fetch: app.fetch,
+  port: 3000,
+});
+
+logger.info("Server is running on http://localhost:3000");
+
+// Graceful shutdown
+function shutdown(signal: string) {
+  logger.warn({ signal }, "Shutting down server...");
+
+  server.close(() => {
+    logger.info("Server closed successfully");
+    process.exit(0);
+  });
+
+  // Force exit if something hangs
+  setTimeout(() => {
+    logger.error("Force exiting process");
+    process.exit(1);
+  }, 10000);
+}
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
