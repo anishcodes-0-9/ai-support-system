@@ -59,7 +59,13 @@ app.use("*", async (c, next) => {
 
 // 4️⃣ Routes AFTER middleware
 // Health check
-app.get("/api/health", (c) => c.json({ status: "ok" }));
+app.get("/api/health", (c) => {
+  return c.json({
+    success: true,
+    data: { status: "ok" },
+    requestId: c.get("requestId"),
+  });
+});
 
 // Minimal Frontend
 app.get("/", (c) => {
@@ -173,9 +179,11 @@ app.route("/api/chat", chatRoutes);
 app.route("/api/agents", agentRoutes);
 
 app.onError((err, c) => {
+  const requestId = c.get("requestId");
+
   if (err instanceof AppError) {
     logger.warn(
-      { message: err.message, statusCode: err.statusCode },
+      { requestId, message: err.message, statusCode: err.statusCode },
       "Operational error",
     );
 
@@ -183,19 +191,21 @@ app.onError((err, c) => {
       {
         success: false,
         error: err.message,
+        requestId,
       },
-      err.statusCode as any,
+      err.statusCode as any, // 👈 important
     );
   }
 
-  logger.error({ err }, "Unexpected system error");
+  logger.error({ requestId, err }, "Unexpected system error");
 
   return c.json(
     {
       success: false,
       error: "Internal Server Error",
+      requestId,
     },
-    500 as any,
+    500,
   );
 });
 
