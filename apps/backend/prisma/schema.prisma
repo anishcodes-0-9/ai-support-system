@@ -35,13 +35,16 @@ model Message {
 model Order {
   id                    String   @id @default(uuid())
   userId                String
+  productName           String
   status                String
-  trackingNumber        String?
+  trackingNumber        String?  @unique
   deliveryStatus        String?
   estimatedDeliveryDate DateTime?
   createdAt             DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+
+  @@index([trackingNumber])
 }
 
 model Invoice {

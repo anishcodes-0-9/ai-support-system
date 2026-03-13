@@ -15,4 +15,21 @@ export const orderRepository = {
       where: { id: orderId },
     });
   },
+
+  async getLatestOrder(userId: string) {
+    return prisma.order.findFirst({
+      where: { userId },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  },
+
+  async getOrderByTrackingNumber(trackingNumber: string) {
+    return prisma.order.findFirst({
+      where: {
+        trackingNumber,
+      },
+    });
+  },
 };

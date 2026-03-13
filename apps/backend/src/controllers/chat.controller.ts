@@ -117,6 +117,7 @@ export const chatController = {
 
     return c.body(stream, 200, {
       "Content-Type": "text/plain; charset=utf-8",
+      "x-conversation-id": conversationId,
     });
   },
 };

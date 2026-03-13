@@ -12,18 +12,26 @@ export default function ChatWindow() {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const scrollToBottom = () => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  useEffect(() => {
+    setMessages([
+      {
+        role: "assistant",
+        content:
+          "Hello! I'm your AI support assistant. I can help you check your orders, tracking numbers, or delivery status.",
+      },
+    ]);
+  }, []);
 
   useEffect(() => {
-    scrollToBottom();
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+    const trimmed = input.trim();
+    if (!trimmed || loading) return;
 
-    const userMessage = { role: "user" as const, content: input };
+    const userMessage = { role: "user" as const, content: trimmed };
+
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
@@ -34,13 +42,12 @@ export default function ChatWindow() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: "4b200b02-1798-4d8a-9619-fb08176e4962",
-          message: input,
+          message: trimmed,
         }),
       });
 
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
-
       let fullText = "";
 
       if (reader) {
@@ -72,7 +79,13 @@ export default function ChatWindow() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col w-[420px] h-[650px] bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-800">
+      {/* Header */}
+      <div className="p-4 border-b border-neutral-800 text-white font-semibold">
+        AI Support Assistant
+      </div>
+
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, index) => (
           <MessageBubble key={index} role={msg.role} content={msg.content} />
@@ -80,19 +93,20 @@ export default function ChatWindow() {
         <div ref={bottomRef} />
       </div>
 
+      {/* Input */}
       <div className="p-4 border-t border-neutral-800 flex gap-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          placeholder="Type your message..."
+          placeholder="Ask about orders, tracking numbers, or delivery..."
           className="flex-1 bg-neutral-800 text-white px-4 py-2 rounded-xl outline-none"
-          disabled={loading}
         />
+
         <button
           onClick={sendMessage}
           disabled={loading}
-          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 rounded-xl text-white"
+          className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl text-white"
         >
           {loading ? "..." : "Send"}
         </button>

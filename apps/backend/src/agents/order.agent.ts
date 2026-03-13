@@ -4,92 +4,107 @@ import { orderTools } from "../tools/order.tools.js";
 import { chatService } from "../services/chat.service.js";
 import { logger } from "../lib/logger.js";
 
+const trackingRegex = /TRK\d+/i;
+
 export const orderAgent = {
   async handle(userId: string, conversationId: string, message: string) {
-    try {
-      logger.info({ userId, conversationId, message }, "OrderAgent invoked");
+    logger.info({ userId, conversationId, message }, "OrderAgent invoked");
 
-      const conversation = await chatService.getConversation(conversationId);
+    const conversation = await chatService.getConversation(conversationId);
+    const history = (conversation?.messages ?? []).slice(-10);
 
-      const history = (conversation?.messages ?? []).slice(-10);
+    // Detect tracking number
+    const trackingMatch = message.match(trackingRegex);
 
-      logger.debug(
-        { historyLength: history.length },
-        "Fetched conversation history",
-      );
+    if (trackingMatch) {
+      const trackingNumber = trackingMatch[0];
 
-      // Fetch all orders sorted by createdAt DESC
-      const orders = await orderTools.listUserOrders(userId);
+      logger.info({ trackingNumber }, "Tracking number detected");
 
-      logger.info({ orderCount: orders.length }, "Fetched user orders");
+      const order = await orderTools.getOrderByTrackingNumber(trackingNumber);
 
-      const formattedOrders =
-        orders.length === 0
-          ? "No orders found."
-          : orders
-              .map(
-                (o, index) => `
-Order ${index + 1}:
-Status: ${o.status}
-Delivery Status: ${o.deliveryStatus ?? "Not available"}
-Estimated Delivery Date: ${
-                  o.estimatedDeliveryDate
-                    ? new Date(o.estimatedDeliveryDate).toDateString()
-                    : "Not available"
-                }
-Created At: ${new Date(o.createdAt).toDateString()}
-`,
-              )
-              .join("\n");
+      if (!order) {
+        return streamText({
+          model: openai(),
+          messages: [
+            {
+              role: "assistant",
+              content: `I couldn't find an order with tracking number ${trackingNumber}. Please verify the number.`,
+            },
+          ],
+        });
+      }
 
-      logger.debug("Prepared formatted orders for LLM");
+      const response = `
+The tracking number ${trackingNumber} is for your ${order.productName}.
 
-      const controller = new AbortController();
+Status: ${order.status}
+Delivery Status: ${order.deliveryStatus ?? "Not available"}
+Estimated Delivery: ${
+        order.estimatedDeliveryDate
+          ? new Date(order.estimatedDeliveryDate).toDateString()
+          : "Not available"
+      }
+`;
 
-      const timeout = setTimeout(() => {
-        logger.error("OrderAgent stream timeout");
-        controller.abort();
-      }, 15000);
-
-      const result = streamText({
+      return streamText({
         model: openai(),
-        abortSignal: controller.signal,
+        messages: [{ role: "assistant", content: response }],
+      });
+    }
 
-        system: `
-You are an Order Support Agent.
+    // Otherwise show normal orders
+    const orders = await orderTools.listUserOrders(userId);
 
-User Orders:
+    const formattedOrders =
+      orders.length === 0
+        ? "User has no orders."
+        : orders
+            .map(
+              (o, index) => `
+Order ${index + 1}
+Product: ${o.productName}
+Status: ${o.status}
+Tracking Number: ${o.trackingNumber ?? "Not available"}
+Delivery Status: ${o.deliveryStatus ?? "Not available"}
+Estimated Delivery: ${
+                o.estimatedDeliveryDate
+                  ? new Date(o.estimatedDeliveryDate).toDateString()
+                  : "Not available"
+              }
+`,
+            )
+            .join("\n");
+
+    const result = streamText({
+      model: openai(),
+
+      system: `
+You are an AI Order Support Agent.
+
+Here are the user's orders:
+
 ${formattedOrders}
 
 Rules:
-- If the user asks about their delivered order, respond using the order with status "DELIVERED".
-- If the user asks about their latest order, use the most recently created order.
-- If the user asks about an in-transit order, use the order with deliveryStatus "In Transit".
-- Always mention the estimated delivery date if available.
-- Never use vague phrases like "soon" if a date exists.
-- Do not guess.
-Respond clearly and conversationally.
+- If the user asks about delivery, reference the deliveryStatus.
+- If the user asks about their latest order, use the most recent order.
+- Always mention the product name.
+- Always include delivery date if available.
 `,
 
-        messages: [
-          ...history.map((m: any) => ({
-            role: m.role as "user" | "assistant",
-            content: m.content,
-          })),
-          {
-            role: "user",
-            content: message,
-          },
-        ],
-      });
+      messages: [
+        ...history.map((m: any) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        })),
+        {
+          role: "user",
+          content: message,
+        },
+      ],
+    });
 
-      // Attach timeout so controller can clear it later
-      (result as any)._timeout = timeout;
-
-      return result;
-    } catch (err) {
-      logger.error({ err }, "OrderAgent failed");
-      throw err;
-    }
+    return result;
   },
 };

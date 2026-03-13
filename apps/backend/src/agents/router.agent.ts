@@ -10,7 +10,6 @@ const intentSchema = z.object({
   intent: z.enum(["order", "billing", "support"]),
 });
 
-// ⏱ Timeout helper
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -34,24 +33,24 @@ export const routerAgent = {
     logger.info({ userId, conversationId, message }, "Router received message");
 
     try {
-      // ⏱ Timeout protected intent classification
       const { object } = await withTimeout(
         generateObject({
           model: openai(),
           schema: intentSchema,
           prompt: `
-Classify the user's intent into one of:
-- order
-- billing
-- support
+Classify the user's intent.
+
+order → delivery status, shipping, tracking numbers, product orders, purchase questions.
+billing → payments, refunds, invoices, charges.
+support → general help not related to orders or billing.
+
+If the message refers to a product, tracking number, delivery date, or order status, classify as "order".
 
 User message:
 "${message}"
-
-Respond only with the intent.
-          `,
+`,
         }),
-        8000, // 8 second timeout
+        8000,
       );
 
       const intent = object.intent;
@@ -71,16 +70,8 @@ Respond only with the intent.
       logger.debug("Delegating to SupportAgent");
       return supportAgent.handle(conversationId, message);
     } catch (err: any) {
-      if (err.message === "LLM_TIMEOUT") {
-        logger.error("Intent classification timeout");
-
-        // Fallback to support agent
-        return supportAgent.handle(conversationId, message);
-      }
-
       logger.error({ err }, "Router failed unexpectedly");
 
-      // Safe fallback
       return supportAgent.handle(conversationId, message);
     }
   },
