@@ -5,6 +5,7 @@ import { orderAgent } from "./order.agent.js";
 import { billingAgent } from "./billing.agent.js";
 import { supportAgent } from "./support.agent.js";
 import { logger } from "../lib/logger.js";
+import { ServiceUnavailableError } from "../lib/AppError.js";
 
 const intentSchema = z.object({
   intent: z.enum(["order", "billing", "support"]),
@@ -70,9 +71,19 @@ User message:
       logger.debug("Delegating to SupportAgent");
       return supportAgent.handle(conversationId, message);
     } catch (err: any) {
-      logger.error({ err }, "Router failed unexpectedly");
+      if (err.message === "LLM_TIMEOUT") {
+        logger.error({ conversationId }, "Intent classification timeout");
 
-      return supportAgent.handle(conversationId, message);
+        throw new ServiceUnavailableError(
+          "Unable to classify request intent: router timed out",
+        );
+      }
+
+      logger.error({ conversationId, err }, "Router failed unexpectedly");
+
+      throw new ServiceUnavailableError(
+        "Unable to classify request intent: router failed",
+      );
     }
   },
 };

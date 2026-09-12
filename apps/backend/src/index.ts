@@ -92,7 +92,7 @@ app.onError((err: any, c) => {
       error: err.message ?? "Internal Server Error",
       requestId,
     },
-    statusCode as 400 | 401 | 403 | 404 | 429 | 500,
+    statusCode as 400 | 401 | 403 | 404 | 429 | 500 | 503,
   );
 });
 // Start server

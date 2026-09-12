@@ -82,7 +82,10 @@ export const chatController = {
     // Route to agent
     const result = await routerAgent.route(userId, conversationId, message);
 
-    logger.info({ requestId }, "Agent routing complete, streaming response");
+    logger.info(
+      { requestId, conversationId },
+      "Agent routing complete, streaming response",
+    );
 
     let fullResponse = "";
 
@@ -107,9 +110,12 @@ export const chatController = {
             fullResponse,
           );
 
-          logger.info({ requestId }, "Assistant response persisted");
+          logger.info(
+            { requestId, conversationId },
+            "Assistant response persisted",
+          );
         } catch (err) {
-          logger.error({ requestId, err }, "Streaming failed");
+          logger.error({ requestId, conversationId, err }, "Streaming failed");
           controller.error(err);
         }
       },

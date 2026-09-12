@@ -10,6 +10,8 @@ export default function ChatWindow() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -35,6 +37,7 @@ export default function ChatWindow() {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
+    setError(null);
 
     try {
       const res = await fetch("/api/chat/messages", {
@@ -43,8 +46,21 @@ export default function ChatWindow() {
         body: JSON.stringify({
           userId: "4b200b02-1798-4d8a-9619-fb08176e4962",
           message: trimmed,
+          ...(conversationId ? { conversationId } : {}),
         }),
       });
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        console.error("Chat request failed", errorBody);
+        setError("Sorry, I couldn't process that request. Please try again.");
+        return;
+      }
+
+      const returnedConversationId = res.headers.get("X-Conversation-Id");
+      if (returnedConversationId && returnedConversationId !== conversationId) {
+        setConversationId(returnedConversationId);
+      }
 
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
@@ -73,6 +89,7 @@ export default function ChatWindow() {
       }
     } catch (err) {
       console.error(err);
+      setError("Sorry, I couldn't process that request. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -94,6 +111,12 @@ export default function ChatWindow() {
       </div>
 
       {/* Input */}
+      {error && (
+        <div className="px-4 py-2 text-sm text-red-400 border-t border-neutral-800">
+          {error}
+        </div>
+      )}
+
       <div className="p-4 border-t border-neutral-800 flex gap-2">
         <input
           value={input}
