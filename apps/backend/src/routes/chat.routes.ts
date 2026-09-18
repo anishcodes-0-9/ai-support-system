@@ -4,6 +4,3 @@ import { chatController } from "../controllers/chat.controller.js";
 export const chatRoutes = new Hono();
 
 chatRoutes.post("/messages", chatController.sendMessage);
-chatRoutes.get("/conversations/:id", chatController.getConversation);
-chatRoutes.get("/conversations", chatController.listConversations);
-chatRoutes.delete("/conversations/:id", chatController.deleteConversation);
