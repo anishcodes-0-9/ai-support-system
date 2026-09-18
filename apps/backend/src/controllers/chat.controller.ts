@@ -121,9 +121,18 @@ export const chatController = {
       },
     });
 
-    return c.body(stream, 200, {
+    const headers: Record<string, string> = {
       "Content-Type": "text/plain; charset=utf-8",
       "x-conversation-id": conversationId,
-    });
+    };
+
+    // Deterministic business data, when the agent resolved a specific order,
+    // travels alongside the narrative stream so the frontend can render it
+    // directly instead of parsing the assistant's text.
+    if ("orderData" in result && result.orderData) {
+      headers["x-order-data"] = JSON.stringify(result.orderData);
+    }
+
+    return c.body(stream, 200, headers);
   },
 };

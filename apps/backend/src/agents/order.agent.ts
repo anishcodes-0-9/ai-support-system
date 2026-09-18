@@ -6,6 +6,17 @@ import { logger } from "../lib/logger.js";
 
 export const trackingRegex = /TRK\d+/i;
 
+const LATEST_KEYWORD = /\b(latest|most recent|recent|current)\b/i;
+const SET_OF_ORDERS_SIGNAL = /\b(orders|how many|all|list|which)\b/i;
+
+// Deterministic, keyword-based check - not an LLM call. Requires an explicit
+// latest/recent/current signal AND rejects messages that read as a request
+// about a set of orders (plural "orders", counts, "all", "list", "which"),
+// so "how many orders did I place recently?" is correctly excluded.
+export function isLatestOrderIntent(message: string): boolean {
+  return LATEST_KEYWORD.test(message) && !SET_OF_ORDERS_SIGNAL.test(message);
+}
+
 export const orderAgent = {
   async handle(userId: string, conversationId: string, message: string) {
     logger.info({ userId, conversationId, message }, "OrderAgent invoked");
@@ -49,8 +60,18 @@ Estimated Delivery: ${
 `;
 
       // Deterministic tool result: stream it as-is, do not let the model regenerate it.
+      // orderData carries only the fields the UI needs to render a structured
+      // card - never the raw DB record - so the frontend never has to parse
+      // this text to recover facts it can render directly.
       return {
         textStream: simulateReadableStream({ chunks: [response] }),
+        orderData: {
+          productName: order.productName,
+          status: order.status,
+          deliveryStatus: order.deliveryStatus,
+          estimatedDeliveryDate: order.estimatedDeliveryDate,
+          trackingNumber: order.trackingNumber,
+        },
       };
     }
 
@@ -92,6 +113,9 @@ Rules:
 - If the user asks about their latest order, use the most recent order.
 - Always mention the product name.
 - Always include delivery date if available.
+- Be concise and direct. Do not open with greetings or small talk, and do not
+  close with filler like "let me know if you have more questions." Answer the
+  question, then stop.
 `,
 
       messages: [
@@ -105,6 +129,24 @@ Rules:
         },
       ],
     });
+
+    // Narration above uses the full order list for context. The structured
+    // card is separate and only attached when the current message explicitly
+    // asks about the latest/recent/current order - not on every turn this
+    // branch handles, and not derived from what the LLM ends up saying.
+    if (isLatestOrderIntent(message)) {
+      const latestOrder = await orderTools.getLatestOrder(userId);
+
+      if (latestOrder) {
+        (result as typeof result & { orderData?: unknown }).orderData = {
+          productName: latestOrder.productName,
+          status: latestOrder.status,
+          deliveryStatus: latestOrder.deliveryStatus,
+          estimatedDeliveryDate: latestOrder.estimatedDeliveryDate,
+          trackingNumber: latestOrder.trackingNumber,
+        };
+      }
+    }
 
     return result;
   },
