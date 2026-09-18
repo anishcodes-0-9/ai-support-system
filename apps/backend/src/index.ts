@@ -20,8 +20,6 @@ app.use("*", requestId);
 
 // 2️⃣ Apply rate limiting BEFORE routes
 app.use("/api/*", rateLimit);
-app.route("/api/chat", chatRoutes);
-app.route("/api/agents", agentRoutes);
 
 // 3️⃣ Request duration tracking
 app.use("*", async (c, next) => {

@@ -5,7 +5,7 @@ import { logger } from "../lib/logger.js";
 import { ValidationError, NotFoundError } from "../lib/AppError.js";
 import { z } from "zod";
 
-const sendMessageSchema = z.object({
+export const sendMessageSchema = z.object({
   userId: z.string().uuid(),
   conversationId: z.string().uuid().optional(),
   message: z.string().min(1),

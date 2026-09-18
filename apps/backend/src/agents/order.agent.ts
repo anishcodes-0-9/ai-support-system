@@ -1,10 +1,10 @@
-import { streamText } from "ai";
+import { streamText, simulateReadableStream } from "ai";
 import { openai } from "../lib/ai.js";
 import { orderTools } from "../tools/order.tools.js";
 import { chatService } from "../services/chat.service.js";
 import { logger } from "../lib/logger.js";
 
-const trackingRegex = /TRK\d+/i;
+export const trackingRegex = /TRK\d+/i;
 
 export const orderAgent = {
   async handle(userId: string, conversationId: string, message: string) {
@@ -12,6 +12,8 @@ export const orderAgent = {
 
     const conversation = await chatService.getConversation(conversationId);
     const history = (conversation?.messages ?? []).slice(-10);
+    // Drop the just-persisted current user message; it's added back explicitly below.
+    const previousHistory = history.slice(0, -1);
 
     // Detect tracking number
     const trackingMatch = message.match(trackingRegex);
@@ -24,15 +26,14 @@ export const orderAgent = {
       const order = await orderTools.getOrderByTrackingNumber(trackingNumber);
 
       if (!order) {
-        return streamText({
-          model: openai(),
-          messages: [
-            {
-              role: "assistant",
-              content: `I couldn't find an order with tracking number ${trackingNumber}. Please verify the number.`,
-            },
-          ],
-        });
+        // Deterministic tool result: stream it as-is, do not let the model regenerate it.
+        return {
+          textStream: simulateReadableStream({
+            chunks: [
+              `I couldn't find an order with tracking number ${trackingNumber}. Please verify the number.`,
+            ],
+          }),
+        };
       }
 
       const response = `
@@ -47,10 +48,10 @@ Estimated Delivery: ${
       }
 `;
 
-      return streamText({
-        model: openai(),
-        messages: [{ role: "assistant", content: response }],
-      });
+      // Deterministic tool result: stream it as-is, do not let the model regenerate it.
+      return {
+        textStream: simulateReadableStream({ chunks: [response] }),
+      };
     }
 
     // Otherwise show normal orders
@@ -94,7 +95,7 @@ Rules:
 `,
 
       messages: [
-        ...history.map((m: any) => ({
+        ...previousHistory.map((m: any) => ({
           role: m.role as "user" | "assistant",
           content: m.content,
         })),

@@ -26,7 +26,7 @@ export const orderRepository = {
   },
 
   async getOrderByTrackingNumber(trackingNumber: string) {
-    return prisma.order.findFirst({
+    return prisma.order.findUnique({
       where: {
         trackingNumber,
       },
