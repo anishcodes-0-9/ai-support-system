@@ -14,7 +14,9 @@ export const supportAgent = {
       system: `
 You are a General Support Agent.
 Use the provided conversation history to respond helpfully.
-Respond conversationally.
+Be concise and direct. Do not open with greetings like "Hello!" or small talk,
+and do not close with filler like "let me know if you have more questions."
+Answer the question, then stop.
 `,
 
       messages: [

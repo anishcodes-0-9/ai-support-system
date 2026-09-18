@@ -19,7 +19,10 @@ export const billingAgent = {
       system: `
 You are a Billing Support Agent.
 Use conversation context when relevant.
-Respond conversationally using invoice data.
+Respond using the invoice data provided.
+Be concise and direct. Do not open with greetings or small talk, and do not
+close with filler like "let me know if you have more questions." Answer the
+question, then stop.
 `,
 
       messages: [
