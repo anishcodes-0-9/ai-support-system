@@ -4,3 +4,32 @@ body {
   margin: 0;
   font-family: system-ui, sans-serif;
 }
+
+.markdown-content p {
+  margin: 0;
+}
+
+.markdown-content p + p {
+  margin-top: 0.5rem;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.markdown-content li + li {
+  margin-top: 0.25rem;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+}
+
+.markdown-content code {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.85em;
+}
